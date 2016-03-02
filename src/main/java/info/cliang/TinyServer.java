@@ -76,7 +76,6 @@ public class TinyServer {
 
         httpResponse.setBody(fileContent);
 
-        httpResponse.addHeader("Host", "localhost");
         String gmtDate = RFC_1123_DATE_TIME.format(ZonedDateTime.now(ZoneId.of("GMT")));
         httpResponse.addHeader("Date", gmtDate);
         httpResponse.addHeader("Server", "TinyServer/0.1 (Mac OSX)");
