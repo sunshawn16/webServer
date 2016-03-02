@@ -8,6 +8,7 @@ import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -38,6 +39,7 @@ public class TinyServer {
     private void handleRequest(Socket clientSocket) throws IOException {
         HttpRequest httpRequest = parseRequest(clientSocket);
         HttpResponse httpResponse = createResponse(httpRequest);
+        httpResponse = addCommonServerHeaders(httpResponse);
         sendResponse(httpResponse, clientSocket);
     }
 
@@ -67,21 +69,47 @@ public class TinyServer {
     }
 
     private HttpResponse createResponse(HttpRequest httpRequest) throws IOException {
-        byte[] fileContent = Files.readAllBytes(Paths.get(rootPath, httpRequest.getPath()));
+        Path resourcePath = Paths.get(rootPath, httpRequest.getPath());
 
+        if (Files.exists(resourcePath)) {
+            return createSuccessResponse(resourcePath);
+        } else {
+            return create404Response();
+        }
+    }
+
+    private HttpResponse createSuccessResponse(Path resourcePath) throws IOException {
         HttpResponse httpResponse = new HttpResponse();
+        byte[] fileContent = Files.readAllBytes(resourcePath);
+
         httpResponse.setVersion("HTTP/1.1");
         httpResponse.setStatusCode("200");
         httpResponse.setReasonPhrase("OK");
 
         httpResponse.setBody(fileContent);
-
-        String gmtDate = RFC_1123_DATE_TIME.format(ZonedDateTime.now(ZoneId.of("GMT")));
-        httpResponse.addHeader("Date", gmtDate);
-        httpResponse.addHeader("Server", "TinyServer/0.1 (Mac OSX)");
         httpResponse.addHeader("Content-Type", "text/html");
         httpResponse.addHeader("Content-Length", String.valueOf(fileContent.length));
 
+        return httpResponse;
+    }
+
+    private HttpResponse create404Response() {
+        HttpResponse httpResponse = new HttpResponse();
+        httpResponse.setVersion("HTTP/1.1");
+        httpResponse.setStatusCode("404");
+        httpResponse.setReasonPhrase("NOT FOUND");
+
+        String body = "404 Not Found";
+        httpResponse.setBody(body.getBytes());
+        httpResponse.addHeader("Content-Type", "text/plain");
+        httpResponse.addHeader("Content-Length", String.valueOf(body.length()));
+        return httpResponse;
+    }
+
+    private HttpResponse addCommonServerHeaders(HttpResponse httpResponse) {
+        String gmtDate = RFC_1123_DATE_TIME.format(ZonedDateTime.now(ZoneId.of("GMT")));
+        httpResponse.addHeader("Date", gmtDate);
+        httpResponse.addHeader("Server", "TinyServer/0.1 (Mac OSX)");
         return httpResponse;
     }
 }
