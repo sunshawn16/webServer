@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Map.Entry;
@@ -55,16 +57,22 @@ public class TinyServer {
         httpResponse.setStatusCode("200");
         httpResponse.setReasonPhrase("OK");
         httpResponse.addHeader("Content-Type", "text/html");
+        byte[] bytes;
+        if(Files.exists(Paths.get(rootPath,httpRequest.getPath()))){
+            bytes = Files.readAllBytes(Paths.get(rootPath,httpRequest.getPath()));
+        }else {
+            String body = "404 Not Found";
+            bytes = body.getBytes();
+        }
 
-        String body = "<h1>You request a file: " + httpRequest.getPath() + "</h1>";
-        httpResponse.setBody(body.getBytes());
-        httpResponse.addHeader("Content-Length", String.valueOf(body.length()));
+        httpResponse.setBody(bytes);
 
         String gmtDate = RFC_1123_DATE_TIME.format(ZonedDateTime.now(ZoneId.of("GMT")));
         httpResponse.addHeader("Date", gmtDate);
         httpResponse.addHeader("Server", "TinyServer/0.1 (Mac OSX)");
         return httpResponse;
     }
+
 
     private void sendResponse(HttpResponse httpResponse, Socket clientSocket) throws IOException {
         DataOutputStream writer = new DataOutputStream(clientSocket.getOutputStream());
